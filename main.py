@@ -106,7 +106,7 @@ def load_pretrained(model, checkpoint_path, optimizer=None, device='cuda'):
         map_location = 'cpu'
     print(f"Loading model params from checkpoint dir: {checkpoint_path}")
     checkpoint_data = torch.load(checkpoint_path, map_location=map_location)
-    model.load_state_dict(checkpoint_data['model_state_dict'])
+    model.load_state_dict(checkpoint_data['model_state_dict'], strict=False)
     if optimizer is not None:
         optimizer.load_state_dict(checkpoint_data['optimizer_state_dict'])
     max_dev_acc, argmax_dev_acc = checkpoint_data["max_dev_acc"], checkpoint_data["argmax_dev_acc"]
@@ -141,8 +141,8 @@ def spell_checking_on_sents(model, vocab, device, normalizer, txt):
         y, z = map(list, zip(*ls))
         try:
             z = ' '.join(z)
-            z = re.sub(r'\*\*(\w+)\*\*', r'** \1 **', z)
-            z = re.sub(r'\*\* (\w+) \*\*', r'**\1**', z)
+            # z = re.sub(r'\*\*(\w+)\*\*', r' \1 ', z)
+            # z = re.sub(r'\*\* (\w+) \*\*', r'\1', z)
         except:
             z = ' '.join(z)
         out.append((" ".join(y), z))
@@ -152,12 +152,21 @@ def spell_checking_on_sents(model, vocab, device, normalizer, txt):
     return new_out, splitters
 
 
+class Nevise():
+    def __init__(self):
+        self.normalizer = Normalizer()
+        vocab_path = os.path.join('model', 'vocab.pkl')
+        model_checkpoint_path = os.path.join('model', 'model.pth.tar')
+        self.model, self.vocab, self.device = load_pre_model(vocab_path=vocab_path, model_checkpoint_path=model_checkpoint_path)
+    
+    def predict(self, text):
+        output = spell_checking_on_sents(self.model, self.vocab, self.device, self.normalizer, text)
+        return output
+
+
 if __name__ == '__main__':
-    normalizer = Normalizer(punctuation_spacing=False, remove_extra_spaces=False)
-    vocab_path = os.path.join('model', 'vocab.pkl')
-    model_checkpoint_path = os.path.join('model', 'model.pth.tar')
-    model, vocab, device = load_pre_model(vocab_path=vocab_path, model_checkpoint_path=model_checkpoint_path)
     #test
+    n = Nevise()
     sample_input = 'این یک مثالل صاده برالی ازرابی این سامانح اسصت'
-    output = spell_checking_on_sents(model, vocab, device, normalizer, sample_input)
+    output = n.predict(sample_input)
     print(output)
